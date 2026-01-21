@@ -109,7 +109,6 @@ export class TaskFieldEquals extends BaseStep implements StepInterface {
         // If no results were found matching the expectedValue, return a fail.
         return this.fail('Task for email %s found. Expected %s field %s %s but it was actually %s', [email, field, operator, expectedValue, tasks[0][field]]);
       }
-    
 
     } catch (e) {
       if (e instanceof util.UnknownOperatorError) {
