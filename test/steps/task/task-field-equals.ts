@@ -82,6 +82,34 @@ describe('TaskFieldEqualsStep', () => {
     expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.PASSED);
   });
 
+  it('should respond with pass if API client resolves multiple matching tasks', async () => {
+    // Stub a response that matches expectations with multiple tasks.
+    const expectedUser: any = { Id: 1, someField: 'Expected Value' };
+    const expectedTasks: any = [
+      { someField: 'Expected Value' },
+      { someField: 'Expected Value' },
+      { someField: 'Expected Value' },
+    ];
+    const taskFieldMap = {
+      'WhoId': expectedUser.Id,
+    };
+    clientWrapperStub.findObjectByField.resolves(expectedUser);
+    clientWrapperStub.findObjectsbyFields.resolves(expectedTasks);
+
+    // Set step data corresponding to expectations
+    const expectations: any = {
+      field: 'someField',
+      expectedValue: expectedTasks[0].someField,
+      email: 'anything@example.com',
+    };
+    protoStep.setData(Struct.fromJavaScript(expectations));
+
+    const response: RunStepResponse = await stepUnderTest.executeStep(protoStep);
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Lead', 'Email', expectations.email);
+    expect(clientWrapperStub.findObjectsbyFields).to.have.been.calledWith('Task', taskFieldMap);
+    expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.PASSED);
+  });
+
   it('should respond with error when invalid operator was passed', async () => {
     // Stub a response that matches expectations.
     const expectedUser: any = { someField: 'Expected Value' };

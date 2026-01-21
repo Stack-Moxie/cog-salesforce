@@ -102,16 +102,14 @@ export class TaskFieldEquals extends BaseStep implements StepInterface {
         }
       });
 
-      if (validResults.length > 1) {
-        // If no results were found, return an error.
-        return this.error('There are more than 1 tasks from %s that matches the expected %s from email %s.', [email, field]);
-      } else if (validResults.length < 1) {
-        // If no results were found matching the expectedValue, return an fail.
+      if (validResults.length >= 1) {
+        // If one or more results were found, return a pass.
+        return this.pass(result.message, [], [record, orderedRecord]);
+      } else {
+        // If no results were found matching the expectedValue, return a fail.
         return this.fail('Task for email %s found. Expected %s field %s %s but it was actually %s', [email, field, operator, expectedValue, tasks[0][field]]);
       }
-
-      return result.valid ? this.pass(result.message, [], [record, orderedRecord])
-        : this.fail(result.message, [], [record, orderedRecord]);
+    
 
     } catch (e) {
       if (e instanceof util.UnknownOperatorError) {
