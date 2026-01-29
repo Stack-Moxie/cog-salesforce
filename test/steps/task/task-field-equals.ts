@@ -112,8 +112,10 @@ describe('TaskFieldEqualsStep', () => {
 
   it('should respond with error when invalid operator was passed', async () => {
     // Stub a response that matches expectations.
-    const expectedUser: any = { someField: 'Expected Value' };
+    const expectedUser: any = { Id: 1, someField: 'Expected Value' };
+    const expectedTasks: any = [{ someField: 'Expected Value' }];
     clientWrapperStub.findObjectByField.resolves(expectedUser);
+    clientWrapperStub.findObjectsbyFields.resolves(expectedTasks);
 
     // Set step data corresponding to expectations
     const expectations: any = {
@@ -130,8 +132,10 @@ describe('TaskFieldEqualsStep', () => {
 
   it('should respond with error when actual and expected values have different types and compared', async () => {
     // Stub a response that matches expectations.
-    const expectedUser: any = { someField: 'Expected Value', numericField: 5000 };
+    const expectedUser: any = { Id: 1, someField: 'Expected Value', numericField: 5000 };
+    const expectedTasks: any = [{ numericField: 5000 }];
     clientWrapperStub.findObjectByField.resolves(expectedUser);
+    clientWrapperStub.findObjectsbyFields.resolves(expectedTasks);
 
     // Set step data corresponding to expectations
     const expectations: any = {
@@ -179,6 +183,23 @@ describe('TaskFieldEqualsStep', () => {
     expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.FAILED);
   });
 
+  it('should respond with fail if recipient exists but has no tasks', async () => {
+    // Stub a response where recipient exists but no tasks are found.
+    const expectedUser: any = { Id: 1, Email: 'test@example.com' };
+    clientWrapperStub.findObjectByField.resolves(expectedUser);
+    clientWrapperStub.findObjectsbyFields.resolves([]);
+
+    protoStep.setData(Struct.fromJavaScript({
+      field: 'anyField',
+      expectedValue: 'Any Value',
+      email: 'test@example.com',
+    }));
+
+    const response: RunStepResponse = await stepUnderTest.executeStep(protoStep);
+    expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.FAILED);
+    expect(response.getMessageFormat()).to.include('No tasks found');
+  });
+
   it('should respond with error if API client returns error', async () => {
     // Stub a response that responds with error.
     const error: Error = new Error('Any error');
@@ -196,8 +217,10 @@ describe('TaskFieldEqualsStep', () => {
 
   it('should respond with error when inputing invalid operator', async () => {
     // Stub a response that responds with error.
-    const expectedUser: any = { someField: 'Expected Value' };
+    const expectedUser: any = { Id: 1, someField: 'Expected Value' };
+    const expectedTasks: any = [{ someField: 'Expected Value' }];
     clientWrapperStub.findObjectByField.resolves(expectedUser);
+    clientWrapperStub.findObjectsbyFields.resolves(expectedTasks);
 
     protoStep.setData(Struct.fromJavaScript({
       field: 'someField',

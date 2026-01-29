@@ -85,6 +85,11 @@ export class TaskFieldEquals extends BaseStep implements StepInterface {
 
       tasks = await this.client.findObjectsbyFields('Task', taskFieldMap);
 
+      // Check if any tasks were found
+      if (!tasks || tasks.length === 0) {
+        return this.fail('No tasks found for recipient with email %s', [email]);
+      }
+
       const record = this.createRecord(tasks[0]);
       const orderedRecord = this.createOrderedRecord(tasks[0], stepData['__stepOrder']);
       const validResults = [];
