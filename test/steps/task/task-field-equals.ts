@@ -56,6 +56,11 @@ describe('TaskFieldEqualsStep', () => {
     const expectedValue: any = fields.filter(f => f.key === 'expectedValue')[0];
     expect(expectedValue.optionality).to.equal(FieldDefinition.Optionality.OPTIONAL);
     expect(expectedValue.type).to.equal(FieldDefinition.Type.ANYSCALAR);
+
+    // objectType field
+    const objectType: any = fields.filter(f => f.key === 'objectType')[0];
+    expect(objectType.optionality).to.equal(FieldDefinition.Optionality.OPTIONAL);
+    expect(objectType.type).to.equal(FieldDefinition.Type.STRING);
   });
 
   it('should respond with pass if API client resolves expected data', async () => {
@@ -108,6 +113,105 @@ describe('TaskFieldEqualsStep', () => {
     expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Lead', 'Email', expectations.email);
     expect(clientWrapperStub.findObjectsbyFields).to.have.been.calledWith('Task', taskFieldMap);
     expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.PASSED);
+  });
+
+  it('should search only Lead when objectType is "lead"', async () => {
+    const expectedUser: any = { Id: 1, someField: 'Expected Value' };
+    const expectedTasks: any = [{ someField: 'Expected Value' }];
+    const taskFieldMap = { 'WhoId': expectedUser.Id };
+    clientWrapperStub.findObjectByField.resolves(expectedUser);
+    clientWrapperStub.findObjectsbyFields.resolves(expectedTasks);
+
+    const expectations: any = {
+      field: 'someField',
+      expectedValue: expectedTasks[0].someField,
+      email: 'anything@example.com',
+      objectType: 'lead',
+    };
+    protoStep.setData(Struct.fromJavaScript(expectations));
+
+    const response: RunStepResponse = await stepUnderTest.executeStep(protoStep);
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledOnce;
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Lead', 'Email', expectations.email);
+    expect(clientWrapperStub.findObjectsbyFields).to.have.been.calledWith('Task', taskFieldMap);
+    expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.PASSED);
+  });
+
+  it('should search only Contact when objectType is "contact"', async () => {
+    const expectedUser: any = { Id: 2, someField: 'Expected Value' };
+    const expectedTasks: any = [{ someField: 'Expected Value' }];
+    const taskFieldMap = { 'WhoId': expectedUser.Id };
+    clientWrapperStub.findObjectByField.resolves(expectedUser);
+    clientWrapperStub.findObjectsbyFields.resolves(expectedTasks);
+
+    const expectations: any = {
+      field: 'someField',
+      expectedValue: expectedTasks[0].someField,
+      email: 'anything@example.com',
+      objectType: 'contact',
+    };
+    protoStep.setData(Struct.fromJavaScript(expectations));
+
+    const response: RunStepResponse = await stepUnderTest.executeStep(protoStep);
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledOnce;
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Contact', 'Email', expectations.email);
+    expect(clientWrapperStub.findObjectsbyFields).to.have.been.calledWith('Task', taskFieldMap);
+    expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.PASSED);
+  });
+
+  it('should search Lead first then Contact when objectType is not specified (default behavior)', async () => {
+    const expectedContact: any = { Id: 3, someField: 'Expected Value' };
+    const expectedTasks: any = [{ someField: 'Expected Value' }];
+    const taskFieldMap = { 'WhoId': expectedContact.Id };
+    // Lead lookup returns null, Contact lookup returns the contact
+    clientWrapperStub.findObjectByField.onFirstCall().resolves(null);
+    clientWrapperStub.findObjectByField.onSecondCall().resolves(expectedContact);
+    clientWrapperStub.findObjectsbyFields.resolves(expectedTasks);
+
+    const expectations: any = {
+      field: 'someField',
+      expectedValue: expectedTasks[0].someField,
+      email: 'anything@example.com',
+    };
+    protoStep.setData(Struct.fromJavaScript(expectations));
+
+    const response: RunStepResponse = await stepUnderTest.executeStep(protoStep);
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Lead', 'Email', expectations.email);
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Contact', 'Email', expectations.email);
+    expect(clientWrapperStub.findObjectsbyFields).to.have.been.calledWith('Task', taskFieldMap);
+    expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.PASSED);
+  });
+
+  it('should respond with fail when objectType is "lead" but no lead exists', async () => {
+    clientWrapperStub.findObjectByField.resolves(null);
+
+    protoStep.setData(Struct.fromJavaScript({
+      field: 'anyField',
+      expectedValue: 'Any Value',
+      email: 'anything@example.com',
+      objectType: 'lead',
+    }));
+
+    const response: RunStepResponse = await stepUnderTest.executeStep(protoStep);
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledOnce;
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Lead', 'Email', 'anything@example.com');
+    expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.FAILED);
+  });
+
+  it('should respond with fail when objectType is "contact" but no contact exists', async () => {
+    clientWrapperStub.findObjectByField.resolves(null);
+
+    protoStep.setData(Struct.fromJavaScript({
+      field: 'anyField',
+      expectedValue: 'Any Value',
+      email: 'anything@example.com',
+      objectType: 'contact',
+    }));
+
+    const response: RunStepResponse = await stepUnderTest.executeStep(protoStep);
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledOnce;
+    expect(clientWrapperStub.findObjectByField).to.have.been.calledWith('Contact', 'Email', 'anything@example.com');
+    expect(response.getOutcome()).to.equal(RunStepResponse.Outcome.FAILED);
   });
 
   it('should respond with error when invalid operator was passed', async () => {
