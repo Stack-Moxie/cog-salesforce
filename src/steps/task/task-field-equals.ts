@@ -16,6 +16,11 @@ export class TaskFieldEquals extends BaseStep implements StepInterface {
   protected actionList: string[] = ['check'];
   protected targetObject: string = 'Task';
   protected expectedFields: Field[] = [{
+    field: 'objectType',
+    type: FieldDefinition.Type.STRING,
+    optionality: FieldDefinition.Optionality.OPTIONAL,
+    description: 'Lead or Contact object type',
+  }, {
     field: 'email',
     type: FieldDefinition.Type.EMAIL,
     description: "Recipient's email address",
@@ -59,6 +64,7 @@ export class TaskFieldEquals extends BaseStep implements StepInterface {
     const field: string = stepData.field;
     const operator: string = stepData.operator || 'be';
     const expectedValue: string = stepData.expectedValue;
+    const objectType: string = (stepData.objectType || '').toLowerCase();
     const isSetOperator = ['be set', 'not be set'].includes(operator);
     let recipient: Record<string, any>;
     let tasks: Record<string, any>[];
@@ -68,7 +74,13 @@ export class TaskFieldEquals extends BaseStep implements StepInterface {
     }
 
     try {
-      recipient = await this.client.findObjectByField('Lead', 'Email', email) || await this.client.findObjectByField('Contact', 'Email', email);
+      if (objectType === 'lead') {
+        recipient = await this.client.findObjectByField('Lead', 'Email', email);
+      } else if (objectType === 'contact') {
+        recipient = await this.client.findObjectByField('Contact', 'Email', email);
+      } else {
+        recipient = await this.client.findObjectByField('Lead', 'Email', email) || await this.client.findObjectByField('Contact', 'Email', email);
+      }
     } catch (e) {
       return this.error('There was a problem checking the Lead: %s', [e.toString()]);
     }
